@@ -15,7 +15,7 @@
 SmartFhirApp.sln
 ├── src/
 │   ├── SmartFhirApp.Core/      # SMART on FHIR 核心服務（Discovery + PKCE + Token）
-│   ├── SmartFhirApp.Shared/    # 共用 Blazor 組件
+│   ├── SmartFhirApp.Shared.UI/ # 共用 Blazor 組件
 │   ├── SmartFhirApp.Maui/      # MAUI App（Android/iOS）
 │   └── SmartFhirApp.Web/       # Blazor WASM（Web）
 ```

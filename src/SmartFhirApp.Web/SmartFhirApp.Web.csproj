@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SmartFhirApp.Core\SmartFhirApp.Core.csproj" />
-    <ProjectReference Include="..\SmartFhirApp.Shared\SmartFhirApp.Shared.csproj" />
+    <ProjectReference Include="..\SmartFhirApp.Shared.UI\SmartFhirApp.Shared.csproj" />
   </ItemGroup>
 
 </Project>

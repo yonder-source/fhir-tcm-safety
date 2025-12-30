@@ -7,7 +7,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{67BB886E-0DC
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartFhirApp.Core", "src\SmartFhirApp.Core\SmartFhirApp.Core.csproj", "{D3EB4A90-8CBF-48AC-8110-C5A46D3B3944}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartFhirApp.Shared", "src\SmartFhirApp.Shared\SmartFhirApp.Shared.csproj", "{D1F03E0E-F71B-4708-A1DF-F3920D35D418}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartFhirApp.Shared.UI", "src\SmartFhirApp.Shared.UI\SmartFhirApp.Shared.csproj", "{D1F03E0E-F71B-4708-A1DF-F3920D35D418}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartFhirApp.Web", "src\SmartFhirApp.Web\SmartFhirApp.Web.csproj", "{B43B365F-8532-4A50-8CC1-53FEE745243E}"
 EndProject
