@@ -48,6 +48,21 @@ public class SmartDiscoveryServiceTests
             service.GetDiscoveryAsync("https://fhir.example.com/fhir", null));
     }
 
+    [Fact]
+    public async Task GetDiscoveryAsync_Throws_WhenResponseEmpty()
+    {
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(string.Empty)
+        });
+
+        var client = new HttpClient(handler);
+        var service = new SmartDiscoveryService(client);
+
+        await Assert.ThrowsAsync<System.Text.Json.JsonException>(() =>
+            service.GetDiscoveryAsync("https://fhir.example.com/fhir", null));
+    }
+
     private sealed class StubHttpMessageHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, HttpResponseMessage> _responseFactory;

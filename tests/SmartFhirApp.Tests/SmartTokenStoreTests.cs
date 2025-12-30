@@ -46,4 +46,25 @@ public class SmartTokenStoreTests
 
         storage.Verify(s => s.RemoveAsync("smart-token"), Times.Once);
     }
+
+    [Fact]
+    public async Task SaveAsync_Throws_WhenTokenNull()
+    {
+        var storage = new Mock<IAppStorage>();
+        var store = new SmartTokenStore(storage.Object);
+
+        await Assert.ThrowsAsync<ArgumentNullException>(async () => await store.SaveAsync(null!));
+    }
+
+    [Fact]
+    public async Task GetAsync_Throws_WhenInvalidJson()
+    {
+        var storage = new Mock<IAppStorage>();
+        storage.Setup(s => s.GetStringAsync("smart-token"))
+            .Returns(ValueTask.FromResult<string?>("{invalid json"));
+
+        var store = new SmartTokenStore(storage.Object);
+
+        await Assert.ThrowsAsync<System.Text.Json.JsonException>(async () => await store.GetAsync());
+    }
 }

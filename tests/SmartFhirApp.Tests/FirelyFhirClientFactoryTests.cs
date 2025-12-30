@@ -41,4 +41,22 @@ public class FirelyFhirClientFactoryTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => factory.CreateAsync());
     }
+
+    [Fact]
+    public async Task CreateAsync_Throws_WhenAccessTokenEmpty()
+    {
+        var options = new SmartOptions
+        {
+            FhirBaseUrl = "https://example.org/fhir",
+            ClientId = "client",
+            RedirectUri = "app://callback"
+        };
+        var tokenStore = new Mock<ISmartTokenStore>();
+        tokenStore.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SmartTokenResponse { AccessToken = "" });
+
+        var factory = new FirelyFhirClientFactory(options, tokenStore.Object);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => factory.CreateAsync());
+    }
 }

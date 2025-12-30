@@ -31,4 +31,18 @@ public class PkceTests
         Assert.False(string.IsNullOrWhiteSpace(challenge1));
         Assert.Equal(challenge1, challenge2);
     }
+
+    [Theory]
+    [InlineData(42)]
+    [InlineData(129)]
+    public void CreateCodeVerifier_Throws_WhenLengthOutOfRange(int length)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Pkce.CreateCodeVerifier(length));
+    }
+
+    [Fact]
+    public void CreateCodeChallenge_Throws_WhenMissingVerifier()
+    {
+        Assert.Throws<ArgumentException>(() => Pkce.CreateCodeChallenge(" "));
+    }
 }
