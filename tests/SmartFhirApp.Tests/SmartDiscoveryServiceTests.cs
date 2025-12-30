@@ -63,6 +63,40 @@ public class SmartDiscoveryServiceTests
             service.GetDiscoveryAsync("https://fhir.example.com/fhir", null));
     }
 
+    [Fact]
+    public async Task GetDiscoveryAsync_Throws_WhenBaseUrlMissing()
+    {
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        var client = new HttpClient(handler);
+        var service = new SmartDiscoveryService(client);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.GetDiscoveryAsync(" ", null));
+    }
+
+    [Fact]
+    public async Task GetDiscoveryAsync_UsesFhirBaseUrl_WhenIssuerNull()
+    {
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new
+            {
+                authorization_endpoint = "https://fhir.example.com/auth",
+                token_endpoint = "https://fhir.example.com/token"
+            })
+        });
+
+        var client = new HttpClient(handler);
+        var service = new SmartDiscoveryService(client);
+
+        await service.GetDiscoveryAsync("https://fhir.example.com/fhir", null);
+
+        Assert.NotNull(handler.LastRequest);
+        Assert.Equal(
+            "https://fhir.example.com/fhir/.well-known/smart-configuration",
+            handler.LastRequest!.RequestUri!.ToString());
+    }
+
     private sealed class StubHttpMessageHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, HttpResponseMessage> _responseFactory;

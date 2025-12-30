@@ -29,6 +29,44 @@ public class SmartAuthServiceTests
     }
 
     [Fact]
+    public async Task BuildAuthorizeUrlAsync_Throws_WhenClientIdMissing()
+    {
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        var client = new HttpClient(handler);
+        var discovery = new SmartDiscoveryService(client);
+        var storage = new Mock<IAppStorage>();
+        var options = new SmartOptions
+        {
+            FhirBaseUrl = "https://fhir.example.com/fhir",
+            ClientId = "",
+            RedirectUri = "http://localhost/callback"
+        };
+
+        var auth = new SmartAuthService(discovery, client, storage.Object, options);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => auth.BuildAuthorizeUrlAsync());
+    }
+
+    [Fact]
+    public async Task BuildAuthorizeUrlAsync_Throws_WhenRedirectUriMissing()
+    {
+        var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        var client = new HttpClient(handler);
+        var discovery = new SmartDiscoveryService(client);
+        var storage = new Mock<IAppStorage>();
+        var options = new SmartOptions
+        {
+            FhirBaseUrl = "https://fhir.example.com/fhir",
+            ClientId = "client",
+            RedirectUri = ""
+        };
+
+        var auth = new SmartAuthService(discovery, client, storage.Object, options);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => auth.BuildAuthorizeUrlAsync());
+    }
+
+    [Fact]
     public async Task BuildAuthorizeUrlAsync_PersistsSession()
     {
         var handler = new StubHttpMessageHandler(request =>
@@ -68,6 +106,8 @@ public class SmartAuthServiceTests
 
         Assert.Contains("aud=", url, StringComparison.Ordinal);
         Assert.Contains("launch=launch-context", url, StringComparison.Ordinal);
+        Assert.Contains("code_challenge_method=S256", url, StringComparison.Ordinal);
+        Assert.Contains("state=", url, StringComparison.Ordinal);
         storage.Verify(s => s.SetStringAsync("smart-auth-session", It.IsAny<string>()), Times.Once);
     }
 
@@ -188,6 +228,182 @@ public class SmartAuthServiceTests
 
         var auth = new SmartAuthService(discovery, client, storage.Object, options);
         await Assert.ThrowsAsync<InvalidOperationException>(() => auth.ExchangeCodeAsync("code", "state"));
+    }
+
+    [Fact]
+    public async Task ExchangeCodeAsync_Succeeds_AndRemovesSession()
+    {
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/.well-known/smart-configuration", StringComparison.Ordinal))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(new
+                    {
+                        authorization_endpoint = "https://issuer.example.com/auth",
+                        token_endpoint = "https://issuer.example.com/token"
+                    })
+                };
+            }
+
+            if (request.RequestUri!.ToString() == "https://issuer.example.com/token")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(new
+                    {
+                        access_token = "access",
+                        token_type = "Bearer",
+                        expires_in = 3600,
+                        scope = "launch/patient openid",
+                        patient = "patient-123"
+                    })
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var client = new HttpClient(handler);
+        var discovery = new SmartDiscoveryService(client);
+        var storage = new Mock<IAppStorage>();
+        storage.Setup(s => s.GetStringAsync("smart-auth-session"))
+            .Returns(ValueTask.FromResult<string?>(JsonSerializer.Serialize(new SmartAuthSession
+            {
+                State = "state",
+                CodeVerifier = "verifier",
+                RedirectUri = "http://localhost/callback"
+            })));
+        storage.Setup(s => s.RemoveAsync("smart-auth-session"))
+            .Returns(ValueTask.CompletedTask);
+
+        var options = new SmartOptions
+        {
+            FhirBaseUrl = "https://fhir.example.com/fhir",
+            ClientId = "client",
+            RedirectUri = "http://localhost/callback",
+            Scope = "launch/patient openid"
+        };
+
+        var auth = new SmartAuthService(discovery, client, storage.Object, options);
+        var token = await auth.ExchangeCodeAsync("code", "state");
+
+        Assert.Equal("access", token.AccessToken);
+        Assert.Equal("Bearer", token.TokenType);
+        Assert.Equal("patient-123", token.Patient);
+        storage.Verify(s => s.RemoveAsync("smart-auth-session"), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExchangeCodeAsync_Throws_WhenAccessTokenMissing()
+    {
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/.well-known/smart-configuration", StringComparison.Ordinal))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(new
+                    {
+                        authorization_endpoint = "https://issuer.example.com/auth",
+                        token_endpoint = "https://issuer.example.com/token"
+                    })
+                };
+            }
+
+            if (request.RequestUri!.ToString() == "https://issuer.example.com/token")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(new
+                    {
+                        token_type = "Bearer",
+                        expires_in = 3600
+                    })
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var client = new HttpClient(handler);
+        var discovery = new SmartDiscoveryService(client);
+        var storage = new Mock<IAppStorage>();
+        storage.Setup(s => s.GetStringAsync("smart-auth-session"))
+            .Returns(ValueTask.FromResult<string?>(JsonSerializer.Serialize(new SmartAuthSession
+            {
+                State = "state",
+                CodeVerifier = "verifier",
+                RedirectUri = "http://localhost/callback"
+            })));
+
+        var options = new SmartOptions
+        {
+            FhirBaseUrl = "https://fhir.example.com/fhir",
+            ClientId = "client",
+            RedirectUri = "http://localhost/callback"
+        };
+
+        var auth = new SmartAuthService(discovery, client, storage.Object, options);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => auth.ExchangeCodeAsync("code", "state"));
+    }
+
+    [Fact]
+    public async Task ExchangeCodeAsync_AllowsNullState()
+    {
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/.well-known/smart-configuration", StringComparison.Ordinal))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(new
+                    {
+                        authorization_endpoint = "https://issuer.example.com/auth",
+                        token_endpoint = "https://issuer.example.com/token"
+                    })
+                };
+            }
+
+            if (request.RequestUri!.ToString() == "https://issuer.example.com/token")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(new
+                    {
+                        access_token = "access",
+                        token_type = "Bearer",
+                        expires_in = 3600
+                    })
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var client = new HttpClient(handler);
+        var discovery = new SmartDiscoveryService(client);
+        var storage = new Mock<IAppStorage>();
+        storage.Setup(s => s.GetStringAsync("smart-auth-session"))
+            .Returns(ValueTask.FromResult<string?>(JsonSerializer.Serialize(new SmartAuthSession
+            {
+                State = "state",
+                CodeVerifier = "verifier",
+                RedirectUri = "http://localhost/callback"
+            })));
+
+        var options = new SmartOptions
+        {
+            FhirBaseUrl = "https://fhir.example.com/fhir",
+            ClientId = "client",
+            RedirectUri = "http://localhost/callback"
+        };
+
+        var auth = new SmartAuthService(discovery, client, storage.Object, options);
+        var token = await auth.ExchangeCodeAsync("code", null);
+
+        Assert.Equal("access", token.AccessToken);
     }
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler
