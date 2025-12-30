@@ -1,0 +1,79 @@
+# .NET / MAUI / Blazor
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.pdb
+*.exe
+.vs/
+*.userprefs
+
+# NuGet
+packages/
+*.nupkg
+nuget.exe
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+[Bb]in/
+[Oo]bj/
+msbuild.log
+msbuild.wrn
+msbuild.err
+
+# Visual Studio
+.vs/
+*.sln.docstates
+*.VC.db
+*.VC.VC.opendb
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Mac
+.DS_Store
+*.dmg
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# MAUI specific
+*.apk
+*.aab
+*.ipa
+*.app
+*.msix
+*.msixbundle
+*.appxbundle
+
+# Android
+*.keystore
+
+# iOS
+*.xcworkspace/
+*.xcuserdata/
+Pods/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Secrets
+appsettings.*.json
+!appsettings.json
+secrets.json
+
+# Logs
+*.log
+logs/

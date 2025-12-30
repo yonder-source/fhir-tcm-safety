@@ -1,0 +1,61 @@
+@page "/"
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject Microsoft.AspNetCore.Components.WebAssembly.Authentication.IAccessTokenProvider TokenProvider
+
+<PageTitle>SMART on FHIR</PageTitle>
+
+<h1>SMART on FHIR（Web）</h1>
+
+<p>使用 Blazor WebAssembly OIDC 進行 SMART OAuth（Authorization Code + PKCE）。</p>
+
+<div class="mb-3">
+    <button class="btn btn-primary me-2" @onclick="StartLogin">
+        登入
+    </button>
+    <button class="btn btn-outline-secondary" @onclick="StartLogout">
+        登出
+    </button>
+</div>
+
+<p>狀態：@(_isAuthenticated ? "已登入" : "未登入")</p>
+
+@if (!string.IsNullOrWhiteSpace(_tokenValue))
+{
+    <div class="alert alert-success mt-3">已取得 Access Token（僅顯示前 32 字）。</div>
+    <pre class="bg-light p-3">@_tokenValue</pre>
+}
+else if (_isAuthenticated)
+{
+    <div class="alert alert-warning mt-3">已登入，但尚未取得 Access Token。</div>
+}
+
+@code {
+    private bool _isAuthenticated;
+    private string? _tokenValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+        _isAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
+
+        if (_isAuthenticated)
+        {
+            var result = await TokenProvider.RequestAccessToken().ConfigureAwait(false);
+            if (result.TryGetToken(out var token))
+            {
+                _tokenValue = token.Value.Length > 32 ? $"{token.Value[..32]}..." : token.Value;
+            }
+        }
+    }
+
+    private void StartLogin()
+    {
+        Navigation.NavigateTo("authentication/login");
+    }
+
+    private void StartLogout()
+    {
+        Navigation.NavigateTo("authentication/logout");
+    }
+}

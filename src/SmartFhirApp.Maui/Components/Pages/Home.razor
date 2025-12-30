@@ -1,0 +1,68 @@
+@page "/"
+@inject SmartFhirApp.Maui.Services.MauiSmartLoginService LoginService
+@inject SmartFhirApp.Core.ISmartTokenStore TokenStore
+
+<h1>SMART on FHIR（手機）</h1>
+
+<p>此頁用於啟動 SMART on FHIR OAuth（Authorization Code + PKCE）。</p>
+
+<button class="btn btn-primary" @onclick="StartLoginAsync" disabled="@_isBusy">
+    @(_isBusy ? "啟動中..." : "開始登入")
+</button>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="alert alert-danger mt-3">@_error</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(_tokenJson))
+{
+    <div class="alert alert-success mt-3">已取得 Token（已暫存於裝置）。</div>
+    <pre class="bg-light p-3">@_tokenJson</pre>
+}
+
+@code {
+    private bool _isBusy;
+    private string? _error;
+    private string? _tokenJson;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var token = await TokenStore.GetAsync().ConfigureAwait(false);
+        if (token is not null)
+        {
+            _tokenJson = System.Text.Json.JsonSerializer.Serialize(token, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true,
+            });
+        }
+    }
+
+    private async Task StartLoginAsync()
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        _error = null;
+
+        try
+        {
+            var token = await LoginService.LoginAsync().ConfigureAwait(false);
+            _tokenJson = System.Text.Json.JsonSerializer.Serialize(token, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+}
