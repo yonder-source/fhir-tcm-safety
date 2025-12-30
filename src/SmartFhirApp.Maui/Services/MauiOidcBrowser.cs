@@ -3,7 +3,7 @@ using Duende.IdentityModel.OidcClient.Browser;
 
 namespace SmartFhirApp.Maui.Services;
 
-public sealed class MauiOidcBrowser : IBrowser
+public sealed class MauiOidcBrowser : Duende.IdentityModel.OidcClient.Browser.IBrowser
 {
     public async Task<BrowserResult> InvokeAsync(BrowserOptions options, CancellationToken cancellationToken = default)
     {

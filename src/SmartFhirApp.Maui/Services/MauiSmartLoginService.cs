@@ -69,13 +69,13 @@ public sealed class MauiSmartLoginService
         {
             AccessToken = loginResult.AccessToken ?? string.Empty,
             TokenType = "Bearer",
-            Scope = loginResult.Scope,
+            Scope = loginResult.TokenResponse?.Scope,
             IdToken = loginResult.IdentityToken,
             RefreshToken = loginResult.RefreshToken,
         };
 
-        if (loginResult.TokenResponse?.Json is not null &&
-            loginResult.TokenResponse.Json.TryGetProperty("patient", out var patientElement) &&
+        if (loginResult.TokenResponse?.Json is { } json &&
+            json.TryGetProperty("patient", out var patientElement) &&
             patientElement.ValueKind == System.Text.Json.JsonValueKind.String)
         {
             token.Patient = patientElement.GetString();

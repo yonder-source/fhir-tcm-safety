@@ -43,24 +43,24 @@ public sealed class SmartAuthService
 
         await _storage.SetStringAsync(SessionStorageKey, JsonSerializer.Serialize(session)).ConfigureAwait(false);
 
-        var query = new Dictionary<string, string?>
+        var query = new Parameters
         {
-            ["response_type"] = "code",
-            ["client_id"] = _options.ClientId,
-            ["redirect_uri"] = _options.RedirectUri,
-            ["scope"] = _options.Scope,
-            ["state"] = state,
-            ["aud"] = _options.FhirBaseUrl,
-            ["code_challenge"] = codeChallenge,
-            ["code_challenge_method"] = "S256",
+            { "response_type", "code" },
+            { "client_id", _options.ClientId },
+            { "redirect_uri", _options.RedirectUri },
+            { "scope", _options.Scope },
+            { "state", state },
+            { "aud", _options.FhirBaseUrl },
+            { "code_challenge", codeChallenge },
+            { "code_challenge_method", "S256" },
         };
 
         if (!string.IsNullOrWhiteSpace(launchContext))
         {
-            query["launch"] = launchContext;
+            query.Add("launch", launchContext);
         }
 
-        var url = new RequestUrl(discovery.AuthorizationEndpoint).Create(query!);
+        var url = new RequestUrl(discovery.AuthorizationEndpoint).Create(query);
         return url;
     }
 
@@ -118,7 +118,8 @@ public sealed class SmartAuthService
             RefreshToken = tokenResponse.RefreshToken,
         };
 
-        if (tokenResponse.Json.TryGetProperty("patient", out var patientElement) &&
+        if (tokenResponse.Json is { } json &&
+            json.TryGetProperty("patient", out var patientElement) &&
             patientElement.ValueKind == JsonValueKind.String)
         {
             token.Patient = patientElement.GetString();

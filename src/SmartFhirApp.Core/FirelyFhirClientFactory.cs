@@ -22,16 +22,17 @@ public sealed class FirelyFhirClientFactory : IFhirClientFactory
         }
 
         var token = await _tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
-        if (token is null || string.IsNullOrWhiteSpace(token.AccessToken))
+        if (token is not { AccessToken: { Length: > 0 } accessToken })
         {
             throw new InvalidOperationException("尚未取得 SMART access token。");
         }
-
         var client = new FhirClient(_options.FhirBaseUrl);
-        client.OnBeforeRequest += (_, e) =>
+        if (client.RequestHeaders is null)
         {
-            e.RawRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
-        };
+            throw new InvalidOperationException("FHIR client request headers 無法使用。");
+        }
+
+        client.RequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         return client;
     }
